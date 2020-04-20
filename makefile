@@ -38,7 +38,7 @@ RM= rm -rf
 #Name of the executable
 #You must modify this!!  TODO:  Here's an example:
 #EXECUTABLE= lab0
-EXECUTABLE= lab2
+EXECUTABLE= MM_P MM_S
 
 #You must modify this!!  TODO:
 #OBJS should be all the object files that will be linked to form the executable
@@ -72,7 +72,14 @@ all: $(EXECUTABLE)
 # Tool invocations.  Provide a rule for each executable.  
 # The right side of each rule lists all the object files the executable is comprised of. 
 #Evidently, the library directory specifications for cuda files are part of NVCC
-$(EXECUTABLE): $(OBJS) 
+MM_P: mainP.o support.o
+	@echo 'Building target: $@'
+	@echo 'Invoking: NVCC Linker'
+	$(NVCC) --cudart static $(CUDAFLAGS) -link -o  $(EXECUTABLE) $(OBJS) $(LIBS)
+	@echo 'Finished building target: $@'
+	@echo ' '
+	
+MM_S: mainS.o support.o
 	@echo 'Building target: $@'
 	@echo 'Invoking: NVCC Linker'
 	$(NVCC) --cudart static $(CUDAFLAGS) -link -o  $(EXECUTABLE) $(OBJS) $(LIBS)
