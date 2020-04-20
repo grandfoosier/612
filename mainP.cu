@@ -2,6 +2,81 @@
 #include <stdlib.h>
 #include "support.h"
 
+__global__ void mysgemm(int m, int n, int k, const float *A, const float *B, float* C) 
+{
+	const unsigned int BLOCK_SIZE = 32;
+	const unsigned int TILE_WIDTH = 32;
+	
+	__shared__ float subTileA[TILE_WIDTH][TILE_WIDTH];
+	__shared__ float subTileB[TILE_WIDTH][TILE_WIDTH];
+	
+	int bx =  blockIdx.x; int by =  blockIdx.y;  
+	int tx = threadIdx.x; int ty = threadIdx.y; 
+	
+	int Row = by * BLOCK_SIZE + ty;
+	int Col = bx * BLOCK_SIZE + tx;
+	float Cvalue = 0; 	
+	
+	for (int i = 0; i < (k-1)/TILE_WIDTH + 1; i++) 
+	{       
+		subTileA[ty][tx] = 0;
+		subTileB[ty][tx] = 0;
+		__syncthreads();
+	
+		if (Row < m &&(TILE_WIDTH*i + tx) < k)
+			subTileA[ty][tx] = A[Row*k + TILE_WIDTH*i+tx];
+		if (Col < n &&(TILE_WIDTH*i + ty) < k)
+			subTileB[ty][tx] = B[ty*n + TILE_WIDTH*n*i + Col];
+		__syncthreads();
+		
+		if (Row < m && Col < n)
+			for (int j = 0; j < TILE_WIDTH; ++j)
+				Cvalue += subTileA[ty][j] * subTileB[j][tx];
+		__syncthreads();
+	}
+		
+	if (Row < m && Col < n)
+		C[Row*n + Col] = Cvalue;
+}
+
+void basicSgemm(char transa, char transb, \
+                int m, int n, int k, \
+                float alpha, \
+				const float *A, int lda, \
+				const float *B, int ldb, \
+				float beta, \
+				float *C, int ldc)
+{
+    if ((transa != 'N') && (transa != 'n')) {
+		printf("unsupported value of 'transa'\n");
+    	return;
+    }
+
+    if ((transb != 'N') && (transb != 'n')) {
+		printf("unsupported value of 'transb'\n");
+		return;
+    }
+
+    if ((alpha - 1.0f > 1e-10) || (alpha - 1.0f < -1e-10)) {
+		printf("unsupported value of alpha\n");
+		return;
+    }
+
+    if ((beta - 0.0f > 1e-10) || (beta - 0.0f < -1e-10)) {
+		printf("unsupported value of beta\n");
+		return;
+    }
+
+    const unsigned int BLOCK_SIZE = 32;
+
+	unsigned int grid_y = (unsigned int) ceil((double)m / (double)BLOCK_SIZE); 
+	unsigned int grid_x = (unsigned int) ceil((double)n / (double)BLOCK_SIZE); 
+	dim3 gridDim(grid_x, grid_y); 
+	dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+	
+	mysgemm<<<gridDim, blockDim>>>(m, n, k, A, B, C);
+}
+
 int main (int argc, char *argv[])
 {
 
@@ -113,83 +188,3 @@ int main (int argc, char *argv[])
 
 	return 0;
 }
-
-void basicSgemm(char transa, char transb, \
-                int m, int n, int k, \
-                float alpha, \
-				const float *A, int lda, \
-				const float *B, int ldb, \
-				float beta, \
-				float *C, int ldc)
-{
-    if ((transa != 'N') && (transa != 'n')) {
-		printf("unsupported value of 'transa'\n");
-    	return;
-    }
-
-    if ((transb != 'N') && (transb != 'n')) {
-		printf("unsupported value of 'transb'\n");
-		return;
-    }
-
-    if ((alpha - 1.0f > 1e-10) || (alpha - 1.0f < -1e-10)) {
-		printf("unsupported value of alpha\n");
-		return;
-    }
-
-    if ((beta - 0.0f > 1e-10) || (beta - 0.0f < -1e-10)) {
-		printf("unsupported value of beta\n");
-		return;
-    }
-
-    const unsigned int BLOCK_SIZE = 32;
-
-	unsigned int grid_y = (unsigned int) ceil((double)m / (double)BLOCK_SIZE); 
-	unsigned int grid_x = (unsigned int) ceil((double)n / (double)BLOCK_SIZE); 
-	dim3 gridDim(grid_x, grid_y); 
-	dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
-	
-	mysgemm<<<gridDim, blockDim>>>(m, n, k, A, B, C);
-}
-
-__global__ void mysgemm(int m, int n, int k, const float *A, const float *B, float* C) 
-{
-	const unsigned int BLOCK_SIZE = 32;
-	const unsigned int TILE_WIDTH = 32;
-	
-	__shared__ float subTileA[TILE_WIDTH][TILE_WIDTH];
-	__shared__ float subTileB[TILE_WIDTH][TILE_WIDTH];
-	
-	int bx =  blockIdx.x; int by =  blockIdx.y;  
-	int tx = threadIdx.x; int ty = threadIdx.y; 
-	
-	int Row = by * BLOCK_SIZE + ty;
-	int Col = bx * BLOCK_SIZE + tx;
-	float Cvalue = 0; 	
-	
-	for (int i = 0; i < (k-1)/TILE_WIDTH + 1; i++) 
-	{       
-		subTileA[ty][tx] = 0;
-		subTileB[ty][tx] = 0;
-		__syncthreads();
-	
-		if (Row < m &&(TILE_WIDTH*i + tx) < k)
-			subTileA[ty][tx] = A[Row*k + TILE_WIDTH*i+tx];
-		if (Col < n &&(TILE_WIDTH*i + ty) < k)
-			subTileB[ty][tx] = B[ty*n + TILE_WIDTH*n*i + Col];
-		__syncthreads();
-		
-		if (Row < m && Col < n)
-			for (int j = 0; j < TILE_WIDTH; ++j)
-				Cvalue += subTileA[ty][j] * subTileB[j][tx];
-		__syncthreads();
-	}
-		
-	if (Row < m && Col < n)
-		C[Row*n + Col] = Cvalue;
-}
-
-
-
-
-
