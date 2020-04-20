@@ -15,7 +15,7 @@ __global__ void kernelP(int m, int n, int k,
 	 
 	if (Row < m && Col < n)
 		for(unsigned int i = 0; i < k; ++i)
-			C_h[row*n + col] += A_h[row*k + i]*B_h[i*n + col];
+			C[row*n + col] += A[row*k + i]*B[i*n + col];
 	__syncthreads();
 }
 
