@@ -72,14 +72,7 @@ all: $(EXECUTABLE)
 # Tool invocations.  Provide a rule for each executable.  
 # The right side of each rule lists all the object files the executable is comprised of. 
 #Evidently, the library directory specifications for cuda files are part of NVCC
-MM_P: mainP.o support.o
-	@echo 'Building target: $@'
-	@echo 'Invoking: NVCC Linker'
-	$(NVCC) --cudart static $(CUDAFLAGS) -link -o  $(EXECUTABLE) $(OBJS) $(LIBS)
-	@echo 'Finished building target: $@'
-	@echo ' '
-	
-MM_S: mainS.o support.o
+$(EXECUTABLE): $(OBJS) 
 	@echo 'Building target: $@'
 	@echo 'Invoking: NVCC Linker'
 	$(NVCC) --cudart static $(CUDAFLAGS) -link -o  $(EXECUTABLE) $(OBJS) $(LIBS)
