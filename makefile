@@ -44,7 +44,7 @@ EXECUTABLE= MM_P MM_S
 #OBJS should be all the object files that will be linked to form the executable
 #In general this will be a xxx.o for each xxx.cu file.  Example:
 #OBJS=first.o main.o
-OBJS= mainP.o support.o
+OBJS= mainP.o mainS.o support.o
 
 
 #The following could be used in place of the default rule, replacing matrix_cuda with 
