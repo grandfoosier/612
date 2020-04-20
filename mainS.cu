@@ -56,12 +56,12 @@ int main (int argc, char *argv[])
     printf("Performing multiplication..."); fflush(stdout);
     startTime(&timer);
 	
-	for(int row = 0; row < matArow; ++row) {
+	for(int row = 0; row < matArow; ++row)
 		for(int col = 0; col < matBcol; ++col) {
 			float sum = 0;
 			for(unsigned int i = 0; i < matAcol; ++i)
-				sum += A[row*matAcol + i]*B[i*matBcol + col];
-			C[row*matBcol + col] = sum;
+				sum += A_h[row*matAcol + i]*B_h[i*matBcol + col];
+			C_h[row*matBcol + col] = sum;
 		}
 	  
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
