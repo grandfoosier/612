@@ -6,7 +6,7 @@ int main (int argc, char *argv[])
 {
 
     Timer timer;
-    printf("\nSetting up the problem..."); fflush(stdout);
+    printf("\nRunning Serial..."); fflush(stdout);
     startTime(&timer);
 
     float *A_h, *B_h, *C_h;
@@ -47,15 +47,9 @@ int main (int argc, char *argv[])
 
     C_h = (float*) malloc( sizeof(float)*C_sz );
 
-    stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 	printf("    A: %u x %u\n    B: %u x %u\n    C: %u x %u\n", 
 		matArow, matAcol, matBrow, matBcol, matArow, matBcol);
 
-
-
-    printf("Performing multiplication..."); fflush(stdout);
-    startTime(&timer);
-	
 	for(int row = 0; row < matArow; ++row)
 		for(int col = 0; col < matBcol; ++col) {
 			float sum = 0;
@@ -65,8 +59,6 @@ int main (int argc, char *argv[])
 		}
 	  
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
-
-
 
     printf("Verifying results..."); fflush(stdout);
 

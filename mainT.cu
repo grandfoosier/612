@@ -2,30 +2,50 @@
 #include <stdlib.h>
 #include "support.h"
 
-__global__ void kernelP(int m, int n, int k, 
-                        const float *A, const float *B, float* C) 
+__global__ void kernelT(int m, int n, int k, const float *A, const float *B, float* C) 
 {
 	const unsigned int BLOCK_SIZE = 32;
+	const unsigned int TILE_WIDTH = 32;
+	
+	__shared__ float subTileA[TILE_WIDTH][TILE_WIDTH];
+	__shared__ float subTileB[TILE_WIDTH][TILE_WIDTH];
 	
 	int bx =  blockIdx.x; int by =  blockIdx.y;  
 	int tx = threadIdx.x; int ty = threadIdx.y; 
 	
 	int Row = by * BLOCK_SIZE + ty;
 	int Col = bx * BLOCK_SIZE + tx;
-	 
+	float Cvalue = 0; 	
+	
+	for (int i = 0; i < (k-1)/TILE_WIDTH + 1; i++) 
+	{       
+		if (Row < m &&(TILE_WIDTH*i + tx) < k)
+			subTileA[ty][tx] = A[Row*k + TILE_WIDTH*i+tx];
+		else
+			subTileA[ty][tx] = 0;
+		if (Col < n &&(TILE_WIDTH*i + ty) < k)
+			subTileB[ty][tx] = B[ty*n + TILE_WIDTH*n*i + Col];
+		else
+			subTileB[ty][tx] = 0;
+		__syncthreads();
+		
+		if (Row < m && Col < n)
+			for (int j = 0; j < TILE_WIDTH; ++j)
+				Cvalue += subTileA[ty][j] * subTileB[j][tx];
+		__syncthreads();
+	}
+		
 	if (Row < m && Col < n)
-		for(unsigned int i = 0; i < k; ++i)
-			C_h[row*n + col] += A_h[row*k + i]*B_h[i*n + col];
-	__syncthreads();
+		C[Row*n + Col] = Cvalue;
 }
 
-void midP(char transa, char transb, \
-		  int m, int n, int k, \
-		  float alpha, \
-		  const float *A, int lda, \
-		  const float *B, int ldb, \
-		  float beta, \
-		 float *C, int ldc)
+void midT(char transa, char transb, \
+                int m, int n, int k, \
+                float alpha, \
+				const float *A, int lda, \
+				const float *B, int ldb, \
+				float beta, \
+				float *C, int ldc)
 {
     if ((transa != 'N') && (transa != 'n')) {
 		printf("unsupported value of 'transa'\n");
@@ -54,14 +74,14 @@ void midP(char transa, char transb, \
 	dim3 gridDim(grid_x, grid_y); 
 	dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
 	
-	kernelP<<<gridDim, blockDim>>>(m, n, k, A, B, C);
+	kernelT<<<gridDim, blockDim>>>(m, n, k, A, B, C);
 }
 
 int main (int argc, char *argv[])
 {
 
     Timer timer;
-    printf("\nRunning Non-Tiled..."); fflush(stdout);
+    printf("\nRunning Tiled..."); fflush(stdout);
     startTime(&timer);
 
     float *A_h, *B_h, *C_h;
@@ -105,7 +125,7 @@ int main (int argc, char *argv[])
     C_h = (float*) malloc( sizeof(float)*C_sz );
 
 	printf("    A: %u x %u\n    B: %u x %u\n    C: %u x %u\n", 
-		   matArow, matAcol, matBrow, matBcol, matArow, matBcol);
+		matArow, matAcol, matBrow, matBcol, matArow, matBcol);
 	
 	cudaMalloc((void **) &A_d, sizeof(float)*A_sz);
 	cudaMalloc((void **) &B_d, sizeof(float)*B_sz);
@@ -116,7 +136,7 @@ int main (int argc, char *argv[])
 	cudaMemcpy(B_d, B_h, sizeof(float)*B_sz, cudaMemcpyHostToDevice);
 	cudaDeviceSynchronize();
 
-	midP('N', 'N', matArow, matBcol, matBrow, 1.0f,
+	midT('N', 'N', matArow, matBcol, matBrow, 1.0f, \
 		 A_d, matArow, B_d, matBrow, 0.0f, C_d, matBrow);
     cudaDeviceSynchronize();
 
